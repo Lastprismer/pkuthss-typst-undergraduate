@@ -1,5 +1,5 @@
 // font.typ: 字体，字号信息
-#import "template/font.typ" : *
+#import "template/font.typ": *
 
 // title_page.typ: 标题页面
 #import "template/title_page.typ": *
@@ -14,15 +14,15 @@
 #import "template/abstract.typ": *
 
 // content.typ: 目录
-#import "template/outline.typ" : *
+#import "template/outline.typ": *
 
 // numbering.typ: 计数部分
-#import "template/numbering.typ" : *
+#import "template/numbering.typ": *
 
 
 #let lengthceil(len, unit: 字号.小四) = calc.ceil(len / unit) * unit
 #let partcounter = counter("part")
-#let chaptercounter = counter("chapter")
+#let chaptercounter = counter(heading)
 #let appendixcounter = counter("appendix")
 #let footnotecounter = counter(footnote)
 #let rawcounter = counter(figure.where(kind: "code"))
@@ -90,7 +90,11 @@
     for el in elements {
       let maybe_number = {
         let el_loc = el.location()
-        chinesenumbering(chaptercounter.at(el_loc).first(), counter(figure.where(kind: kind)).at(el_loc).first(), location: el_loc)
+        chinesenumbering(
+          chaptercounter.at(el_loc).first(),
+          counter(figure.where(kind: kind)).at(el_loc).first(),
+          location: el_loc,
+        )
         h(0.5em)
       }
       let line = {
@@ -98,7 +102,7 @@
           let width = measure(maybe_number, styles).width
           box(
             width: lengthceil(width),
-            link(el.location(), maybe_number)
+            link(el.location(), maybe_number),
           )
         }
 
@@ -135,7 +139,9 @@
       set align(left)
       raw
     },
-    caption: caption, kind: "code", supplement: ""
+    caption: caption,
+    kind: "code",
+    supplement: "",
   )
 }
 
@@ -159,7 +165,7 @@
     block(
       width: width,
       grid(
-        columns: (auto),
+        columns: auto,
         row-gutter: 1em,
         line(length: 100%),
         [
@@ -168,11 +174,13 @@
             width: 100% - 1em,
             grid(
               columns: columns,
-              ..headers.zip(aligns).map(it => [
-                #set align(it.last())
-                #strong(it.first())
-              ])
-            )
+              ..headers
+                .zip(aligns)
+                .map(it => [
+                  #set align(it.last())
+                  #strong(it.first())
+                ])
+            ),
           )
         ],
         line(length: 100%),
@@ -183,18 +191,20 @@
             grid(
               columns: columns,
               row-gutter: 1em,
-              ..contents.zip(content_aligns).map(it => [
-                #set align(it.last())
-                #it.first()
-              ])
-            )
+              ..contents
+                .zip(content_aligns)
+                .map(it => [
+                  #set align(it.last())
+                  #it.first()
+                ])
+            ),
           )
         ],
         line(length: 100%),
       ),
     ),
     caption: caption,
-    kind: table
+    kind: table,
   )
 }
 
@@ -218,17 +228,18 @@
   doc,
 ) = {
   set text(weight: "regular", font: 字体.宋体, size: 字号.小四, lang: "zh")
-  
+
   set heading(numbering: chinesenumbering)
   set list(indent: 2em)
   set enum(indent: 2em)
-  
-  set page("a4",
+
+  set page(
+    "a4",
     margin: (
-      top : 2.5cm,
-      right : 2cm,
-      left : 2cm,
-      bottom : 2.5cm
+      top: 2.5cm,
+      right: 2cm,
+      left: 2cm,
+      bottom: 2.5cm,
     ),
     header: context {
       if not doc_mode.at(here()) {
@@ -239,44 +250,55 @@
       ctitle
       v(-0.5em)
       line(length: 100%)
-     },
+    },
     footer: foot_numbering(),
   )
 
-  show <reference> : set heading(numbering: none)
-  show <thanks> : set heading(numbering: none)
+  show <reference>: set heading(numbering: none)
+  show <thanks>: set heading(numbering: none)
   show strong: it => text(font: 字体.黑体, weight: "semibold", it.body)
   show emph: it => text(font: 字体.楷体, style: "italic", it.body)
   set par(spacing: linespacing)
   show raw: set text(font: 字体.代码)
 
-  show figure: it => [
-    #set align(center)
-    #if not it.has("kind") {
-      it
-    } else if it.kind == image {
-      it.body
-      linebreak()
-      [
-        #set text(字号.五号)
-        #it.caption
-      ]
-    } else if it.kind == table {
-      it.body
-      [
-        #set text(字号.五号)
-        
-        #it.caption
-      ]
-      
-    } else if it.kind == "code" {
-      it.body
-      [
-        #set text(字号.五号)
-        代码#it.caption
-      ]
-    }
-  ]
+  // show figure: it => [
+  //   #set align(center)
+  //   #if not it.has("kind") {
+  //     it
+  //   } else if it.kind == image {
+  //     it.body
+  //     linebreak()
+  //     [
+  //       #set text(字号.五号)
+  //       #it.caption
+  //     ]
+  //   } else if it.kind == table {
+  //     it.body
+  //     [
+  //       #set text(字号.五号)
+
+  //       #it.caption
+  //     ]
+  //   } else if it.kind == "code" {
+  //     it.body
+  //     [
+  //       #set text(字号.五号)
+  //       代码#it.caption
+  //     ]
+  //   }
+  // ]
+  show figure.caption: set text(font: 字体.宋体, size: 字号.五号)
+  show figure.where(kind: table): set figure.caption(position: top)
+  set figure(
+    numbering: (..nums) => context {
+      set text(font: 字体.宋体)
+      if appendixcounter.at(here()).first() < 10 {
+        numbering("1.1", chaptercounter.at(here()).first(), ..nums)
+      } else {
+        numbering("A.1", chaptercounter.at(here()).first(), ..nums)
+      }
+    },
+  )
   set math.equation(
     numbering: (..nums) => context {
       set text(font: 字体.宋体)
@@ -285,7 +307,7 @@
       } else {
         numbering("(A.1)", chaptercounter.at(here()).first(), ..nums)
       }
-    }
+    },
   )
 
   show heading: it => {
@@ -293,7 +315,7 @@
     set par(first-line-indent: 0em)
 
     let sizedheading(it, size) = [
-      #set text(size : size, font : 字体.黑体)
+      #set text(size: size, font: 字体.黑体)
       #v(0.5em)
       #if it.numbering != none {
         counter(heading).display()
@@ -305,6 +327,9 @@
     set align(left)
     set text(weight: "regular")
     if it.level == 1 {
+      rawcounter.update(0)
+      imagecounter.update(0)
+      tablecounter.update(0)
       sizedheading(it, 字号.三号)
     } else if it.level == 2 {
       sizedheading(it, 字号.小三)
@@ -327,37 +352,57 @@
       let el_loc = el.location()
       if el.func() == math.equation {
         // Handle equations
-        link(el_loc, [
-          式
-          #chinesenumbering(chaptercounter.at(el_loc).first(), equationcounter.at(el_loc).first(), location: el_loc, brackets: true)
-        ])
+        link(
+          el_loc,
+          [
+            式
+            #chinesenumbering(
+              chaptercounter.at(el_loc).first(),
+              equationcounter.at(el_loc).first(),
+              location: el_loc,
+              brackets: true,
+            )
+          ],
+        )
       } else if el.func() == figure {
         // Handle figures
         if el.kind == image {
-          link(el_loc, [
-            图
-            #chinesenumbering(chaptercounter.at(el_loc).first(), imagecounter.at(el_loc).first(), location: el_loc)
-          ])
+          link(
+            el_loc,
+            [
+              图
+              #chinesenumbering(chaptercounter.at(el_loc).first(), imagecounter.at(el_loc).first(), location: el_loc)
+            ],
+          )
         } else if el.kind == table {
-          link(el_loc, [
-            表
-            #chinesenumbering(chaptercounter.at(el_loc).first(), tablecounter.at(el_loc).first(), location: el_loc)
-          ])
+          link(
+            el_loc,
+            [
+              表
+              #chinesenumbering(chaptercounter.at(el_loc).first(), tablecounter.at(el_loc).first(), location: el_loc)
+            ],
+          )
         } else if el.kind == "code" {
-          link(el_loc, [
-            代码
-            #chinesenumbering(chaptercounter.at(el_loc).first(), rawcounter.at(el_loc).first(), location: el_loc)
-          ])
+          link(
+            el_loc,
+            [
+              代码
+              #chinesenumbering(chaptercounter.at(el_loc).first(), rawcounter.at(el_loc).first(), location: el_loc)
+            ],
+          )
         }
       } else if el.func() == heading {
         // Handle headings
         if el.level == 1 {
           link(el_loc, chinesenumbering(..counter(heading).at(el_loc), location: el_loc))
         } else {
-          link(el_loc, [
-            节
-            #chinesenumbering(..counter(heading).at(el_loc), location: el_loc)
-          ])
+          link(
+            el_loc,
+            [
+              节
+              #chinesenumbering(..counter(heading).at(el_loc), location: el_loc)
+            ],
+          )
         }
       }
 
@@ -367,8 +412,8 @@
   }
 
 
-  set par(first-line-indent: 2em, leading: 1em)
-  show par : it => context {
+  set par(first-line-indent: (amount: 2em, all: true), leading: 1em)
+  show par: it => context {
     if doc_mode.at(here()) {
       v(0.1em)
       it
@@ -376,7 +421,7 @@
       it
     }
   }
-  
+
   set align(start)
 
   // 正文显示部分
